@@ -36,18 +36,29 @@ kl_2667 <- as.data.table(
 # plot(kl_2667[, c("MESS_DATUM", "TMK")], type = "l", las = 1)
 # plot(kl_2667[, c("MESS_DATUM", "TXK")], type = "l", las = 1)
 
-sliding_average <- function(dt, col_name, timebreaks) {
+sliced_average <- function(dt, col_name, timebreaks) {
   sapply(seq_len(length(timebreaks) - 1), function(i) {
     low <- timebreaks[i]
     high <- timebreaks[i + 1]
     mean(
-      dt[year(MESS_DATUM) >= low & year(MESS_DATUM) < high][["TXK"]]
+      dt[year(MESS_DATUM) >= low & year(MESS_DATUM) < high][[col_name]]
     )
   })
 }
+# 
+# timebreaks <- seq(1957, 2017, 5)
+# times <- timebreaks[2:length(timebreaks)] - 0.5 * diff(timebreaks)
+# 
+# plot(times, sliced_average(kl_2667, "TXK", timebreaks))
+# plot(times, sliced_average(kl_2667, "TMK", timebreaks))
 
-timebreaks <- seq(1957, 2017, 5)
-times <- timebreaks[2:length(timebreaks)] - 0.5 * diff(timebreaks)
-max_temps <- sliding_average(kl_2667, "TXK", timebreaks)
+ref_window <- c(1958, 1967)
+ana_window <- c(2008, 2017)
 
-plot(times, max_temps)
+txk_ref <- kl_2667[year(MESS_DATUM) >= ref_window[1] & year(MESS_DATUM) < ref_window[2]][["TXK"]]
+txk_ana <- kl_2667[year(MESS_DATUM) >= ana_window[1] & year(MESS_DATUM) < ana_window[2]][["TXK"]]
+ks.test(txk_ana, txk_ref)
+
+tmk_ref <- kl_2667[year(MESS_DATUM) >= ref_window[1] & year(MESS_DATUM) < ref_window[2]][["TMK"]]
+tmk_ana <- kl_2667[year(MESS_DATUM) >= ana_window[1] & year(MESS_DATUM) < ana_window[2]][["TMK"]]
+ks.test(tmk_ana, tmk_ref)
