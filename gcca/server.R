@@ -71,14 +71,34 @@ shinyServer(function(input, output, session) {
     kl_2667[MESS_DATUM >= input$ana_dates[1] & MESS_DATUM < input$ana_dates[2]]
   })
   
-   output$distPlot <- renderPlot({
-     temp <- data.frame(
-       maxtemp = c(refData()$TXK, anaData()$TXK),
-       window = c(rep("ref", nrow(refData())), rep("ana", nrow(anaData())))
-     )
-     ggplot(temp, aes(maxtemp, colour = window)) +
-       geom_freqpoly(binwidth = 5) +
-       xlim(c(-10, 40))
-   })
-   
+  kstest <- reactive({
+    ks.test(anaData()$TXK, refData()$TXK)
+  })
+  
+  output$stats <- renderUI(
+    tagList(
+      h3(sprintf("Comparing [%s - %s] with [%s - %s]",
+                year(input$ana_dates[1]), year(input$ana_dates[2]),
+                year(input$ref_dates[1]), year(input$ref_dates[2]))
+      ),
+      br(),
+      p(
+        "Statistical significance: ",
+        strong(paste("p =", kstest()$p.value)),
+        paste0("(", kstest()$method, ", ", kstest()$alternative, ")")
+      ),
+      h2(sprintf("Probability of no climate change: %s %%", format(kstest()$p.value * 100, scientific = FALSE)))
+    )
+  )
+  
+  output$distPlot <- renderPlot({
+    temp <- data.frame(
+      maxtemp = c(refData()$TXK, anaData()$TXK),
+      window = c(rep("ref", nrow(refData())), rep("ana", nrow(anaData())))
+    )
+    ggplot(temp, aes(maxtemp, colour = window)) +
+      geom_freqpoly(binwidth = 5) +
+      xlim(c(-10, 40))
+  })
+  
 })
