@@ -10,8 +10,6 @@ kl_2667 <- as.data.table(
   dataDWD(selectDWD(id = station_id, res = "daily", var = "kl", per = "historical"))  
 )
 
-ana_duration <- dyears(10) # 10 years
-
 # Übersicht über Variablen:
 #   (aus Metadaten der Station 2667, in der historical .zip-Datei, Datei "Metadaten_Parameter_klima_tag_02667.html")
 # FM: Tagesmittel der Windgeschwindigkeit [m/s]
@@ -47,17 +45,22 @@ ana_duration <- dyears(10) # 10 years
 # Define server logic required to draw a histogram
 shinyServer(function(input, output, session) {
   
+  ana_duration <- reactive(dyears(input$ana_duration)) # 10 years
+  
   output$widgets <- renderUI({
     ref_min_date <- min(kl_2667$MESS_DATUM)
-    ref_max_date <- min_date + ana_duration
+    ref_max_date <- min_date + ana_duration()
     ana_max_date <- max(kl_2667$MESS_DATUM)
-    ana_min_date <- ana_max_date - ana_duration
-    tagList(
-      sliderInput("ref_dates", label = h3("Reference Time Window"), timeFormat = "%Y",
-                  min = ref_min_date, max = ana_max_date, value = c(ref_min_date, ref_max_date)),
-      sliderInput("ana_dates", label = h3("Analysis Time Window"), timeFormat = "%Y",
-                  min = ref_min_date, max = ana_max_date, value = c(ana_min_date, ana_max_date))
-    )
+    ana_min_date <- ana_max_date - ana_duration()
+    sl_ref <- sliderInput("ref_dates", label = h3("Reference Time Window"), timeFormat = "%Y",
+                          min = ref_min_date, max = ana_max_date,
+                          value = c(ref_min_date, ref_max_date), step = ana_duration())
+    sl_ref$attribs$class <- paste(sl_ref$attribs$class, "fixed-width")
+    sl_ana <- sliderInput("ana_dates", label = h3("Analysis Time Window"), timeFormat = "%Y",
+                          min = ref_min_date, max = ana_max_date,
+                          value = c(ana_min_date, ana_max_date), step = ana_duration())
+    sl_ana$attribs$class <- paste(sl_ana$attribs$class, "fixed-width")
+    tagList(sl_ref, sl_ana)
   })
   
   refData <- reactive({
