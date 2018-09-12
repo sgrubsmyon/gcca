@@ -75,7 +75,8 @@ shinyServer(function(input, output, session) {
     ks.test(anaData()$TXK, refData()$TXK)
   })
   
-  output$stats <- renderUI(
+  output$stats <- renderUI({
+    req(input$ana_dates)
     tagList(
       h3(sprintf("Comparing [%s - %s] with [%s - %s]",
                 year(input$ana_dates[1]), year(input$ana_dates[2]),
@@ -87,15 +88,34 @@ shinyServer(function(input, output, session) {
         strong(paste("p =", kstest()$p.value)),
         paste0("(", kstest()$method, ", ", kstest()$alternative, ")")
       ),
-      h2(sprintf("Probability of no climate change: %s %%", format(kstest()$p.value * 100, scientific = FALSE)))
+      # Mean ks.test p.value of two samples drawn from the same random distribution is quite close to 0.5:
+      #   mean(sapply(1:1000, function(i) ks.test(rnorm(3500, 15, 9), rnorm(3500, 15, 9))$p.value))
+      # So, assume that p.value = 0.5 "means" ~100% probability that distributions
+      # are identical.
+      h2(sprintf("Probability of no climate change between ref and ana: ~%s%%",
+                 format(min(kstest()$p.value * 2 * 100, 100), scientific = FALSE)))
     )
-  )
+  })
   
   output$distPlot <- renderPlot({
-    temp <- data.frame(
+    temp <- data.table(
       maxtemp = c(refData()$TXK, anaData()$TXK),
       window = c(rep("ref", nrow(refData())), rep("ana", nrow(anaData())))
     )
+    # temp <- rbind(
+    #   temp,
+    #   data.table(
+    #     maxtemp = rnorm(3500, 15, 9),
+    #     window = "rnorm 15 8"
+    #   )
+    # )
+    # temp <- rbind(
+    #   temp,
+    #   data.table(
+    #     maxtemp = rnorm(3500, 13.5, 9),
+    #     window = "rnorm 13.5 8"
+    #   )
+    # )
     ggplot(temp, aes(maxtemp, colour = window)) +
       geom_freqpoly(binwidth = 5) +
       xlim(c(-10, 40))
