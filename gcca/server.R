@@ -88,28 +88,6 @@ shinyServer(function(input, output, session) {
     })
   }
   
-  # output$stats <- renderUI({
-  #   req(input$ana_dates)
-  #   tagList(
-  #     h3(sprintf("Comparing [%s - %s] with [%s - %s]",
-  #               year(input$ana_dates[1]), year(input$ana_dates[2]),
-  #               year(input$ref_dates[1]), year(input$ref_dates[2]))
-  #     ),
-  #     br(),
-  #     p(
-  #       "Statistical significance: ",
-  #       strong(paste("p =", kstest()$p.value)),
-  #       paste0("(", kstest()$method, ", ", kstest()$alternative, ")")
-  #     ),
-  #     # Mean ks.test p.value of two samples drawn from the same random distribution is quite close to 0.5:
-  #     #   mean(sapply(1:1000, function(i) ks.test(rnorm(3500, 15, 9), rnorm(3500, 15, 9))$p.value))
-  #     # So, assume that p.value = 0.5 "means" ~100% probability that distributions
-  #     # are identical.
-  #     h2(sprintf("Probability of no climate change between ref and ana: ~%s%%",
-  #                format(min(kstest()$p.value * 2 * 100, 100), scientific = FALSE)))
-  #   )
-  # })
-  
   output$time_windows <- renderUI({
     req(input$ana_dates)
     h3(sprintf("Comparing [%s - %s] with [%s - %s]",
@@ -122,24 +100,19 @@ shinyServer(function(input, output, session) {
       quantity = c(refData()$TXK, anaData()$TXK),
       Window = c(rep("Reference", nrow(refData())), rep("Analysis", nrow(anaData())))
     )
-    # temp <- rbind(
-    #   temp,
-    #   data.table(
-    #     maxtemp = rnorm(3500, 15, 9),
-    #     window = "rnorm 15 8"
-    #   )
-    # )
-    # temp <- rbind(
-    #   temp,
-    #   data.table(
-    #     maxtemp = rnorm(3500, 13.5, 9),
-    #     window = "rnorm 13.5 8"
-    #   )
-    # )
-    ggplot(temp, aes(quantity, colour = Window)) +
+    p <- ggplot(temp, aes(quantity, colour = Window)) +
       geom_freqpoly(binwidth = 5) +
       xlab(labels$TXK) +
       xlim(c(-10, 40))
+    p <- p + annotate("text", label = sprintf("Average in Ref.: %s °C",
+                                              signif(mean(refData()$TXK), 4)),
+                      x = Inf, y = Inf, size = 8, colour = "red",
+                      hjust = 0.95, vjust = 0.95)
+    p <- p + annotate("text", label = sprintf("Average in Ana.: %s °C",
+                                              signif(mean(anaData()$TXK), 4)),
+                      x = Inf, y = Inf, size = 8, colour = "red",
+                      hjust = 0.85, vjust = 0.85)
+    p
   })
   
 })
