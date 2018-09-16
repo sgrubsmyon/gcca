@@ -2,6 +2,7 @@ library(rdwd)
 library(data.table)
 library(lubridate)
 library(ggplot2)
+library(grid)
 
 station_id <- 2667
 
@@ -104,14 +105,18 @@ shinyServer(function(input, output, session) {
       geom_freqpoly(binwidth = 5) +
       xlab(labels$TXK) +
       xlim(c(-10, 40))
-    p <- p + annotate("text", label = sprintf("Average in Ref.: %s °C",
-                                              signif(mean(refData()$TXK), 4)),
-                      x = Inf, y = Inf, size = 8, colour = "red",
-                      hjust = 0.95, vjust = 0.95)
-    p <- p + annotate("text", label = sprintf("Average in Ana.: %s °C",
-                                              signif(mean(anaData()$TXK), 4)),
-                      x = Inf, y = Inf, size = 8, colour = "red",
-                      hjust = 0.85, vjust = 0.85)
+    # Add static labels: 
+    # (http://www.cs.utexas.edu/~cannata/dataVis/Class%20Notes/Beautiful%20plotting%20in%20R_%20A%20ggplot2%20cheatsheet%20_%20Technical%20Tidbits%20From%20Spatial%20Analysis%20&%20Data%20Science.pdf)
+    grob_ref <- grobTree(textGrob(
+      sprintf("Average in Ref.: %s °C", signif(mean(refData()$TXK), 4)),
+      x = 0.75,  y = 0.95, hjust = 0,
+      gp = gpar(col = "blue", fontsize = 20, fontface = "bold")))
+    grob_ana <- grobTree(textGrob(
+      sprintf("Average in Ana.: %s °C", signif(mean(anaData()$TXK), 4)),
+      x = 0.75,  y = 0.85, hjust = 0,
+      gp = gpar(col = "blue", fontsize = 20, fontface = "bold")))
+    p <- p + annotation_custom(grob_ref)
+    p <- p + annotation_custom(grob_ana)
     p
   })
   
