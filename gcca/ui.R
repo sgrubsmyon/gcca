@@ -18,7 +18,8 @@ shinyUI(fluidPage(
     
     # Show a plot of the generated distribution
     mainPanel(
-      wellPanel(uiOutput("stats")),
+      # wellPanel(uiOutput("stats")),
+      uiOutput("time_windows"),
       plotOutput("distPlot", height = 500)
     )
   )

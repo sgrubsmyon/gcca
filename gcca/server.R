@@ -10,6 +10,9 @@ kl_2667 <- as.data.table(
   dataDWD(selectDWD(id = station_id, res = "daily", var = "kl", per = "historical"))  
 )
 
+# Set default ggplot font size to a larger value
+theme_set(theme_gray(base_size = 20))
+
 # Übersicht über Variablen:
 #   (aus Metadaten der Station 2667, in der historical .zip-Datei, Datei "Metadaten_Parameter_klima_tag_02667.html")
 # FM: Tagesmittel der Windgeschwindigkeit [m/s]
@@ -26,6 +29,14 @@ kl_2667 <- as.data.table(
 # TXK: Tagesmaximum der Lufttemperatur in 2m Höhe [°C]
 # UPM: Tagesmittel der Relativen Feuchte [%]
 # VPM: Tagesmittel des Dampfdruckes [hpa]
+
+labels <- list(
+  TXK = "Diurnal max. of air temperature at 2m above ground [°C]",
+  TNK = "Diurnal min. of air temperature at 2m above ground [°C]",
+  TMK = "Diurnal average of air temperature [°C]",
+  FX  = "Max. wind speed [m/s]",
+  FM  = "Average wind speed [m/s]"
+)
 
 # QN_3?
 # QN_4?
@@ -71,36 +82,45 @@ shinyServer(function(input, output, session) {
     kl_2667[MESS_DATUM >= input$ana_dates[1] & MESS_DATUM < input$ana_dates[2]]
   })
   
-  kstest <- reactive({
-    ks.test(anaData()$TXK, refData()$TXK)
-  })
+  kstest <- function(quantity = "TXK") {
+    reactive({
+      ks.test(anaData()[[quantity]], refData()[[quantity]])
+    })
+  }
   
-  output$stats <- renderUI({
+  # output$stats <- renderUI({
+  #   req(input$ana_dates)
+  #   tagList(
+  #     h3(sprintf("Comparing [%s - %s] with [%s - %s]",
+  #               year(input$ana_dates[1]), year(input$ana_dates[2]),
+  #               year(input$ref_dates[1]), year(input$ref_dates[2]))
+  #     ),
+  #     br(),
+  #     p(
+  #       "Statistical significance: ",
+  #       strong(paste("p =", kstest()$p.value)),
+  #       paste0("(", kstest()$method, ", ", kstest()$alternative, ")")
+  #     ),
+  #     # Mean ks.test p.value of two samples drawn from the same random distribution is quite close to 0.5:
+  #     #   mean(sapply(1:1000, function(i) ks.test(rnorm(3500, 15, 9), rnorm(3500, 15, 9))$p.value))
+  #     # So, assume that p.value = 0.5 "means" ~100% probability that distributions
+  #     # are identical.
+  #     h2(sprintf("Probability of no climate change between ref and ana: ~%s%%",
+  #                format(min(kstest()$p.value * 2 * 100, 100), scientific = FALSE)))
+  #   )
+  # })
+  
+  output$time_windows <- renderUI({
     req(input$ana_dates)
-    tagList(
-      h3(sprintf("Comparing [%s - %s] with [%s - %s]",
-                year(input$ana_dates[1]), year(input$ana_dates[2]),
-                year(input$ref_dates[1]), year(input$ref_dates[2]))
-      ),
-      br(),
-      p(
-        "Statistical significance: ",
-        strong(paste("p =", kstest()$p.value)),
-        paste0("(", kstest()$method, ", ", kstest()$alternative, ")")
-      ),
-      # Mean ks.test p.value of two samples drawn from the same random distribution is quite close to 0.5:
-      #   mean(sapply(1:1000, function(i) ks.test(rnorm(3500, 15, 9), rnorm(3500, 15, 9))$p.value))
-      # So, assume that p.value = 0.5 "means" ~100% probability that distributions
-      # are identical.
-      h2(sprintf("Probability of no climate change between ref and ana: ~%s%%",
-                 format(min(kstest()$p.value * 2 * 100, 100), scientific = FALSE)))
-    )
+    h3(sprintf("Comparing [%s - %s] with [%s - %s]",
+               year(input$ana_dates[1]), year(input$ana_dates[2]),
+               year(input$ref_dates[1]), year(input$ref_dates[2])))
   })
   
   output$distPlot <- renderPlot({
     temp <- data.table(
-      maxtemp = c(refData()$TXK, anaData()$TXK),
-      window = c(rep("ref", nrow(refData())), rep("ana", nrow(anaData())))
+      quantity = c(refData()$TXK, anaData()$TXK),
+      Window = c(rep("Reference", nrow(refData())), rep("Analysis", nrow(anaData())))
     )
     # temp <- rbind(
     #   temp,
@@ -116,8 +136,9 @@ shinyServer(function(input, output, session) {
     #     window = "rnorm 13.5 8"
     #   )
     # )
-    ggplot(temp, aes(maxtemp, colour = window)) +
+    ggplot(temp, aes(quantity, colour = Window)) +
       geom_freqpoly(binwidth = 5) +
+      xlab(labels$TXK) +
       xlim(c(-10, 40))
   })
   
